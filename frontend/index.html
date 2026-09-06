@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed ML Inference Gateway</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glow-green { box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); }
+        .glow-red { box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }
+        .glow-blue { box-shadow: 0 0 12px rgba(6, 182, 212, 0.4); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-white pb-12">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="h-9 w-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center font-bold text-slate-950 shadow-lg">
+                    ML
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        Distributed ML Inference Gateway
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">v1.0 FA</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Distributed Systems Framework • Synchronous gRPC & Async RabbitMQ</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="btn-refresh-all" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition flex items-center gap-1.5 border border-slate-700">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Refresh Status
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
+
+        <!-- 1. SYSTEM ARCHITECTURE & LIVE STATUS -->
+        <section class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    1. System Architecture & Component Status
+                </h2>
+            </div>
+
+            <!-- Visual Flow Diagram -->
+            <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-center gap-3 text-xs md:text-sm font-mono text-slate-300">
+                <div class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-center">
+                    Frontend<br><span class="text-slate-400 text-xs">localhost:3000</span>
+                </div>
+                <div class="text-cyan-400 font-bold">➔ HTTP/WS ➔</div>
+                <div class="px-3 py-2 rounded-lg bg-cyan-950/60 border border-cyan-700/50 text-cyan-300 text-center">
+                    FastAPI Gateway<br><span class="text-cyan-400 text-xs">localhost:8000</span>
+                </div>
+                <div class="flex flex-col gap-1 items-center">
+                    <span class="text-emerald-400 text-xs font-semibold">gRPC ➔</span>
+                    <span class="text-amber-400 text-xs font-semibold">RabbitMQ ➔</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <div class="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-700/50 text-emerald-300 text-center">
+                        gRPC Worker<br><span class="text-emerald-400 text-xs">localhost:50051</span>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-700/50 text-amber-300 text-center">
+                        Batch Consumer<br><span class="text-amber-400 text-xs">AMQP Queue</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- API Gateway -->
+                <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">API Gateway</span>
+                        <span id="status-gateway" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400">
+                            Checking...
+                        </span>
+                    </div>
+                    <div class="text-sm font-semibold text-white">FastAPI / Uvicorn</div>
+                    <div class="text-xs text-slate-400">http://localhost:8000</div>
+                </div>
+
+                <!-- gRPC Worker -->
+                <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">gRPC Worker</span>
+                        <span id="status-grpc" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400">
+                            Checking...
+                        </span>
+                    </div>
+                    <div class="text-sm font-semibold text-white">InferenceService</div>
+                    <div class="text-xs text-slate-400">localhost:50051</div>
+                </div>
+
+                <!-- RabbitMQ -->
+                <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">RabbitMQ Broker</span>
+                        <span id="status-rabbitmq" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400">
+                            Checking...
+                        </span>
+                    </div>
+                    <div class="text-sm font-semibold text-white">AMQP Broker</div>
+                    <div class="text-xs text-slate-400">localhost:5672</div>
+                </div>
+
+                <!-- Batch Consumer -->
+                <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Batch Consumer</span>
+                        <span id="status-consumer" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400">
+                            Checking...
+                        </span>
+                    </div>
+                    <div class="text-sm font-semibold text-white">Queue: batch_inference</div>
+                    <div class="text-xs text-slate-400">Worker Node 01</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GRID FOR SYNC & ASYNC PANELS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <!-- 2. SYNCHRONOUS INFERENCE -->
+            <section class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="text-md font-semibold text-emerald-400 flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        2. Synchronous Inference (gRPC)
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">POST /predict/sync</span>
+                </div>
+
+                <form id="form-sync" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Request ID</label>
+                            <input type="text" id="sync-req-id" value="req-001" required
+                                class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Model Name</label>
+                            <input type="text" id="sync-model-name" value="demo-model" required
+                                class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500 font-mono">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Input Tensor (comma-separated float values)</label>
+                        <input type="text" id="sync-tensor" value="1,2,3,4,5" required
+                            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500 font-mono">
+                    </div>
+                    <button type="submit" id="btn-sync" class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition shadow-lg flex items-center justify-center gap-2">
+                        <span>Run Synchronous Inference</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </button>
+                </form>
+
+                <!-- Response Display -->
+                <div id="sync-result-box" class="hidden p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-xs">
+                    <div class="flex items-center justify-between text-slate-400 border-b border-slate-800 pb-2">
+                        <span>INFERENCE RESULT</span>
+                        <span id="sync-res-type" class="text-emerald-400 font-semibold uppercase"></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-slate-300">
+                        <div>Request ID: <span id="sync-res-id" class="text-white font-bold"></span></div>
+                        <div>Worker ID: <span id="sync-res-worker" class="text-white font-bold"></span></div>
+                        <div>Exec Time: <span id="sync-res-exectime" class="text-emerald-400 font-bold"></span></div>
+                        <div>Gateway Latency: <span id="sync-res-gwlatency" class="text-cyan-400 font-bold"></span></div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400 mb-1">Output Tensor:</div>
+                        <div id="sync-res-output" class="p-2 bg-slate-900 rounded border border-slate-800 text-emerald-300 overflow-x-auto"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. ASYNCHRONOUS BATCH INFERENCE -->
+            <section class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="text-md font-semibold text-amber-400 flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        3. Asynchronous Batch Inference (RabbitMQ)
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">POST /predict/async</span>
+                </div>
+
+                <form id="form-async" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Request ID</label>
+                            <input type="text" id="async-req-id" value="batch-001" required
+                                class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Model Name</label>
+                            <input type="text" id="async-model-name" value="batch-model" required
+                                class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Input Tensor</label>
+                        <input type="text" id="async-tensor" value="10,20,30,40" required
+                            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+                    <button type="submit" id="btn-async" class="w-full py-2.5 px-4 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium text-sm transition shadow-lg flex items-center justify-center gap-2">
+                        <span>Enqueue Batch Job</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    </button>
+                </form>
+
+                <!-- Activity Log Table -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                        <span>BATCH ACTIVITY LOG</span>
+                        <span class="font-mono">Queue: batch_inference</span>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 max-h-48 overflow-y-auto">
+                        <table class="w-full text-left text-xs font-mono">
+                            <thead class="bg-slate-900 text-slate-400 border-b border-slate-800 sticky top-0">
+                                <tr>
+                                    <th class="p-2">Time</th>
+                                    <th class="p-2">Request ID</th>
+                                    <th class="p-2">Queue</th>
+                                    <th class="p-2 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="async-log-body" class="divide-y divide-slate-800 text-slate-300">
+                                <tr>
+                                    <td colspan="4" class="p-4 text-center text-slate-500 italic">No batch jobs enqueued yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 4. LIVE WEBCAM & WEBSOCKET STREAM PANEL -->
+        <section class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div>
+                    <h2 class="text-md font-semibold text-cyan-400 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        4. Live Webcam Stream & WebRTC Signaling (WebSocket)
+                    </h2>
+                    <p class="text-xs text-slate-400">Stream-Oriented Multimedia Communication Demo</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="btn-start-cam" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition flex items-center gap-1">
+                        Start Camera
+                    </button>
+                    <button id="btn-stop-cam" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition" disabled>
+                        Stop Camera
+                    </button>
+                    <button id="btn-connect-ws" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition flex items-center gap-1">
+                        Connect WebSocket
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                <!-- Video Container -->
+                <div class="md:col-span-2 relative rounded-xl bg-slate-950 border border-slate-800 overflow-hidden aspect-video flex items-center justify-center">
+                    <video id="webcam" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                    <div id="video-placeholder" class="text-center p-6 space-y-2 text-slate-500">
+                        <svg class="w-12 h-12 mx-auto stroke-current opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <p class="text-sm font-medium">Camera is turned off</p>
+                        <p class="text-xs text-slate-600">Click 'Start Camera' to request WebRTC getUserMedia() stream</p>
+                    </div>
+                    <!-- Live Stats Overlay -->
+                    <div class="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 flex items-center gap-3">
+                        <div>Res: <span id="stream-res" class="text-cyan-400 font-bold">N/A</span></div>
+                        <div>FPS: <span id="stream-fps" class="text-emerald-400 font-bold">0.0</span></div>
+                    </div>
+                </div>
+
+                <!-- WebSocket Signaling Log -->
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-xs h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                            <span class="text-slate-400 font-bold">SIGNALING STATUS</span>
+                            <span id="status-ws" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">DISCONNECTED</span>
+                        </div>
+                        <div id="ws-log" class="mt-3 space-y-2 max-h-48 overflow-y-auto text-slate-400">
+                            <div class="italic text-slate-600">Click 'Connect WebSocket' to initiate signaling...</div>
+                        </div>
+                    </div>
+                    <button id="btn-send-ping" class="w-full mt-3 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition" disabled>
+                        Send Signaling Frame (Offer)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. PERFORMANCE METRICS -->
+        <section class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h2 class="text-md font-semibold text-slate-200 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    5. Performance & Aggregated Metrics
+                </h2>
+                <span class="text-xs text-slate-400 font-mono">GET /stats</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                    <div class="text-2xl font-bold text-emerald-400 font-mono" id="metric-sync-count">0</div>
+                    <div class="text-xs text-slate-400 mt-1">Sync gRPC Requests</div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                    <div class="text-2xl font-bold text-amber-400 font-mono" id="metric-async-count">0</div>
+                    <div class="text-xs text-slate-400 mt-1">Async RabbitMQ Requests</div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                    <div class="text-2xl font-bold text-cyan-400 font-mono" id="metric-avg-latency">0.0 ms</div>
+                    <div class="text-xs text-slate-400 mt-1">Avg Synchronous Latency</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. DISTRIBUTED SYSTEM CONCEPTS -->
+        <section class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+            <h2 class="text-md font-semibold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-3">
+                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                6. Distributed System Concepts Summary
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <div class="font-bold text-cyan-400">API Gateway</div>
+                    <p class="text-slate-400">Single entry point handling HTTP/WS client requests, managing routing, and converting REST calls into gRPC/AMQP protocol messages.</p>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <div class="font-bold text-emerald-400">gRPC & Protobuf</div>
+                    <p class="text-slate-400">High-performance binary RPC protocol over HTTP/2 with strongly-typed protocol buffers for ultra-low latency internal ML inference.</p>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <div class="font-bold text-amber-400">RabbitMQ Message Queue</div>
+                    <p class="text-slate-400">Asynchronous AMQP message broker enabling non-blocking batch processing, queue persistence, and decoupling gateway from worker load.</p>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <div class="font-bold text-cyan-400">Synchronous Processing</div>
+                    <p class="text-slate-400">Blocking request-response model where the client waits for immediate computation output from the worker node before responding.</p>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <div class="font-bold text-amber-400">Asynchronous Processing</div>
+                    <p class="text-slate-400">Non-blocking model returning instant enqueue status to client while batch consumer workers process queue messages out-of-band.</p>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <div class="font-bold text-cyan-400">WebSockets & WebRTC</div>
+                    <p class="text-slate-400">Full-duplex real-time communication protocol for browser signaling, paired with browser WebRTC media capture streams.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package inference;
+
+service InferenceService {
+    rpc Predict(InferenceRequest) returns (InferenceResponse);
+    rpc StreamPredict(stream InferenceRequest) returns (stream InferenceResponse);
+}
+
+message InferenceRequest {
+    string request_id = 1;
+    repeated float input_tensor = 2;
+    string model_name = 3;
+}
+
+message InferenceResponse {
+    string request_id = 1;
+    string worker_id = 2;
+    repeated float output_tensor = 3;
+    float execution_time_ms = 4;
+}
