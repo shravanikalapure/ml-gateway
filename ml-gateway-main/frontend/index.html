@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed ML Inference Gateway</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-white pb-16">
+
+    <!-- Top Sticky Header -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 shadow-md">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="h-9 w-9 rounded-lg bg-gradient-to-tr from-cyan-500 via-teal-400 to-emerald-400 flex items-center justify-center font-bold text-slate-950 shadow-md">
+                    DS
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        Distributed ML Inference Gateway
+                    </h1>
+                    <p class="text-xs text-slate-400">Bully Election • Ricart–Agrawala • Multi-Worker Cluster • Serverless FaaS</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span id="auto-refresh-indicator" class="hidden sm:inline-flex items-center text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-1 rounded-md">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span> Live Polling (3s)
+                </span>
+                <button id="btn-refresh-all" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5 border border-slate-700">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-10">
+
+        <!-- ============================================================= -->
+        <!-- SECTION A: HEADER & SYSTEM OVERVIEW                           -->
+        <!-- ============================================================= -->
+        <section id="section-overview" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    System Overview & Local Status
+                </h2>
+                <span class="text-xs text-slate-500">All modules running locally on single host</span>
+            </div>
+
+            <!-- 5 Metric Cards in Responsive Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                <!-- 1. App Status -->
+                <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <div class="text-[11px] font-medium text-slate-400">Gateway Status</div>
+                    <div class="flex items-center gap-2">
+                        <span id="overview-app-status-badge" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            ONLINE
+                        </span>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-mono">http://localhost:8000</div>
+                </div>
+
+                <!-- 2. Total Inferences -->
+                <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <div class="text-[11px] font-medium text-slate-400">Total Inferences</div>
+                    <div id="overview-total-requests" class="text-xl font-bold text-white font-mono">0</div>
+                    <div class="text-[11px] text-slate-500">Gateway routed calls</div>
+                </div>
+
+                <!-- 3. Active Workers -->
+                <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <div class="text-[11px] font-medium text-slate-400">Active Workers</div>
+                    <div class="flex items-baseline gap-1">
+                        <span id="overview-active-workers" class="text-xl font-bold text-cyan-400 font-mono">3</span>
+                        <span id="overview-total-workers" class="text-xs text-slate-500 font-mono">/ 3 Online</span>
+                    </div>
+                    <div class="text-[11px] text-slate-500">Logical multi-worker pool</div>
+                </div>
+
+                <!-- 4. Bully Coordinator -->
+                <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <div class="text-[11px] font-medium text-slate-400">Current Coordinator</div>
+                    <div id="overview-coordinator-name" class="text-sm font-bold text-amber-400 truncate">Worker Gamma</div>
+                    <div id="overview-coordinator-id" class="text-[11px] text-slate-500 font-mono">Node ID: 300</div>
+                </div>
+
+                <!-- 5. Ricart-Agrawala CS -->
+                <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1 col-span-2 sm:col-span-1">
+                    <div class="text-[11px] font-medium text-slate-400">Critical Section</div>
+                    <div id="overview-cs-status" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                        FREE (Released)
+                    </div>
+                    <div class="text-[11px] text-slate-500 truncate">model-weights-update</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SECTION B: INFERENCE GATEWAY                                 -->
+        <!-- ============================================================= -->
+        <section id="section-gateway" class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h2 class="text-base font-semibold text-white">Synchronous ML Inference Gateway</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400 font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800">POST /predict/sync</span>
+                    <span class="text-xs text-cyan-400 bg-cyan-950/40 px-2 py-1 rounded border border-cyan-800/40">Round-Robin Routing</span>
+                </div>
+            </div>
+
+            <form id="form-sync" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Request ID</label>
+                        <input type="text" id="sync-req-id" value="req-001" required
+                            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-cyan-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Model Name</label>
+                        <select id="sync-model-name" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-cyan-500 font-mono">
+                            <option value="demo-model">demo-model (1.5x multiplier)</option>
+                            <option value="fast-model">fast-model (2.0x multiplier)</option>
+                            <option value="heavy-model">heavy-model (0.5x multiplier)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Quick Presets</label>
+                        <div class="flex items-center gap-2 pt-0.5">
+                            <button type="button" class="preset-btn px-2 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700" data-val="1, 2, 3, 4">[1, 2, 3, 4]</button>
+                            <button type="button" class="preset-btn px-2 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700" data-val="5, 10, 15, 20">[5, 10, 15, 20]</button>
+                            <button type="button" class="preset-btn px-2 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700" data-val="0.5, 1.5, 2.5, 3.5">[0.5..3.5]</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Input Tensor (comma-separated numbers)</label>
+                    <input type="text" id="sync-tensor" value="1.0, 2.0, 3.0, 4.0" required
+                        class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-cyan-500 font-mono">
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button type="submit" id="btn-sync" class="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition shadow-lg flex items-center justify-center gap-2">
+                        <span>Predict (Synchronous)</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </button>
+                    <span id="sync-error-msg" class="text-xs text-rose-400 hidden"></span>
+                </div>
+            </form>
+
+            <!-- Inference Result Box -->
+            <div id="sync-result-box" class="hidden p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-xs">
+                <div class="flex items-center justify-between text-slate-400 border-b border-slate-800/80 pb-2">
+                    <span class="font-bold text-slate-200 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> INFERENCE RESULT & ROUTING TELEMETRY
+                    </span>
+                    <span id="sync-res-type" class="text-emerald-400 font-semibold uppercase"></span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-300">
+                    <div>Request ID: <div id="sync-res-id" class="text-white font-bold mt-0.5"></div></div>
+                    <div>Selected Worker: <div id="sync-res-worker" class="text-cyan-400 font-bold mt-0.5"></div></div>
+                    <div>Execution Time: <div id="sync-res-exectime" class="text-emerald-400 font-bold mt-0.5"></div></div>
+                    <div>Gateway Latency: <div id="sync-res-gwlatency" class="text-amber-400 font-bold mt-0.5"></div></div>
+                </div>
+                <div>
+                    <div class="text-slate-400 mb-1">Output Tensor:</div>
+                    <div id="sync-res-output" class="p-2.5 bg-slate-900 rounded border border-slate-800 text-emerald-300 overflow-x-auto font-bold text-xs"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SECTION C: BULLY ELECTION ALGORITHM                          -->
+        <!-- ============================================================= -->
+        <section id="section-election" class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-semibold text-white">Bully Election Algorithm</h2>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Highest alive process ID wins. Nodes send ELECTION, respond with ANSWER (OK), and victor broadcasts COORDINATOR.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="election-initiator-select" class="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 font-mono">
+                        <option value="">Auto Initiator (Lowest Alive)</option>
+                        <option value="100">Node 100 (Worker Alpha)</option>
+                        <option value="200">Node 200 (Worker Beta)</option>
+                        <option value="300">Node 300 (Worker Gamma)</option>
+                    </select>
+                    <button id="btn-start-election" class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs transition shadow flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Start Election
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3 Simulated Nodes Cards -->
+            <div id="election-nodes-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Dynamically rendered -->
+            </div>
+
+            <!-- Election Event Audit Log -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="font-semibold uppercase tracking-wider text-slate-300">Live Election Message Audit Log (ELECTION • ANSWER • COORDINATOR)</span>
+                    <button id="btn-refresh-election-log" class="text-cyan-400 hover:underline text-[11px]">Refresh Log</button>
+                </div>
+                <div id="election-log-box" class="h-44 overflow-y-auto p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-[11px] space-y-1.5 text-slate-300">
+                    <!-- Event logs rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SECTION D: RICART–AGRAWALA MUTUAL EXCLUSION                  -->
+        <!-- ============================================================= -->
+        <section id="section-ricart-agrawala" class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-semibold text-white">Ricart–Agrawala Distributed Mutual Exclusion</h2>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Lamport logical clocks: <code class="text-cyan-300">L = max(L_local, L_received) + 1</code>. Priority tie-breaking: <code class="text-cyan-300">(timestamp, process_id)</code>.
+                    </p>
+                </div>
+                <button id="btn-reset-ra" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition border border-slate-700">
+                    Reset State
+                </button>
+            </div>
+
+            <!-- Critical Section Occupancy Indicator -->
+            <div id="ra-cs-banner" class="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div id="ra-cs-pulse" class="w-3.5 h-3.5 rounded-full bg-slate-600"></div>
+                    <div>
+                        <div class="text-xs text-slate-400">Critical Section Resource</div>
+                        <div class="text-sm font-bold text-white font-mono">model-weights-update</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">Occupancy:</span>
+                    <span id="ra-cs-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                        FREE (No process in CS)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Process Cards: P1, P2, P3 -->
+            <div id="ra-processes-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Dynamically rendered -->
+            </div>
+
+            <!-- Ricart-Agrawala Message History -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="font-semibold uppercase tracking-wider text-slate-300">Message Exchanges (REQUEST • REPLY • DEFERRED • ENTER_CS)</span>
+                    <button id="btn-refresh-ra-log" class="text-cyan-400 hover:underline text-[11px]">Refresh Log</button>
+                </div>
+                <div id="ra-log-box" class="h-44 overflow-y-auto p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-[11px] space-y-1.5 text-slate-300">
+                    <!-- Event logs rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SECTION E: DISTRIBUTED WEB-BASED SYSTEM                      -->
+        <!-- ============================================================= -->
+        <section id="section-multi-worker" class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-semibold text-white">Distributed Web-Based System & Multi-Worker Cluster</h2>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Logical cluster simulated locally with health-aware round-robin routing and automatic failover.
+                    </p>
+                </div>
+                <span class="text-xs text-slate-400 bg-slate-950 px-2.5 py-1 rounded border border-slate-800 font-mono">
+                    GET /system/topology
+                </span>
+            </div>
+
+            <!-- Visual Topology Flow -->
+            <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 text-center">Cluster Topology Flow</div>
+                <div class="flex flex-col items-center gap-3">
+                    <!-- Gateway Box -->
+                    <div class="px-5 py-2.5 rounded-lg bg-cyan-950/80 border border-cyan-700/60 text-center text-cyan-300 text-xs font-mono shadow-md">
+                        <div class="font-bold text-white text-sm">FastAPI Ingress Gateway</div>
+                        <div>localhost:8000 • Round-Robin Dispatcher</div>
+                    </div>
+
+                    <!-- Flow Arrows -->
+                    <div class="flex items-center justify-around w-full max-w-lg text-xs font-mono text-slate-500">
+                        <div class="flex flex-col items-center text-cyan-400 font-bold">
+                            <span>↙</span>
+                            <span class="text-[10px]">worker-1</span>
+                        </div>
+                        <div class="flex flex-col items-center text-cyan-400 font-bold">
+                            <span>↓</span>
+                            <span class="text-[10px]">worker-2</span>
+                        </div>
+                        <div class="flex flex-col items-center text-cyan-400 font-bold">
+                            <span>↘</span>
+                            <span class="text-[10px]">worker-3</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3 Worker Cards -->
+            <div id="workers-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Dynamically rendered -->
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SECTION F: SERVERLESS ARCHITECTURE AND FAAS                  -->
+        <!-- ============================================================= -->
+        <section id="section-serverless" class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-semibold text-white">Serverless Architecture & FaaS Simulation</h2>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Ephemeral micro-runtime lifecycle: cold start initialization penalty vs. warm invocation reuse, idle timeout teardown, and simulated memory footprint.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-reset-faas" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition border border-slate-700">
+                        Reset Runtime
+                    </button>
+                </div>
+            </div>
+
+            <!-- FaaS Controls & Live Telemetry -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Invoke Panel -->
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                    <div class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Invoke Function</div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-slate-400 mb-1">Input Tensor</label>
+                        <input type="text" id="faas-input-tensor" value="1.0, 2.0, 3.0, 4.0, 5.0"
+                            class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500">
+                    </div>
+                    <button id="btn-invoke-faas" class="w-full py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs transition shadow flex items-center justify-center gap-2">
+                        <span>Invoke Serverless Function</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </button>
+                    <div id="faas-last-result" class="hidden p-2.5 rounded bg-slate-900 border border-slate-800 font-mono text-[11px] space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Invocation Type:</span>
+                            <span id="faas-res-cold-badge" class="font-bold"></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Init Overhead:</span>
+                            <span id="faas-res-init-time" class="text-white"></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Exec Time:</span>
+                            <span id="faas-res-exec-time" class="text-purple-400"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State & Counters -->
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">FaaS Runtime State</span>
+                        <span id="faas-state-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                            COLD
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                        <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-400">Total Invocations</div>
+                            <div id="faas-count-total" class="text-base font-bold text-white mt-0.5">0</div>
+                        </div>
+                        <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-400">Cold Starts</div>
+                            <div id="faas-count-cold" class="text-base font-bold text-rose-400 mt-0.5">0</div>
+                        </div>
+                        <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-400">Warm Starts</div>
+                            <div id="faas-count-warm" class="text-base font-bold text-emerald-400 mt-0.5">0</div>
+                        </div>
+                        <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-400">Idle Countdown</div>
+                            <div id="faas-idle-timer" class="text-base font-bold text-cyan-400 mt-0.5">15.0s</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memory & Container Info -->
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                    <div class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Simulated Memory Footprint</div>
+                    <div class="p-2.5 bg-slate-900 rounded border border-slate-800 font-mono text-xs space-y-1">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Container ID:</span>
+                            <span id="faas-container-id" class="text-white font-bold">None</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Simulated RAM:</span>
+                            <span id="faas-memory-mb" class="text-purple-300 font-bold">0.0 MB</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800">
+                            Transparently marked: Represents simulated container allocation (128MB base + buffers), not OS process RSS.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FaaS Lifecycle Event Log -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="font-semibold uppercase tracking-wider text-slate-300">Runtime Lifecycle History (Spawn • Warm Invocations • Idle Teardown)</span>
+                </div>
+                <div id="faas-lifecycle-log" class="h-36 overflow-y-auto p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-[11px] space-y-1.5 text-slate-300">
+                    <!-- Events rendered here -->
+                </div>
+            </div>
+
+            <!-- Persistent vs Serverless Comparison Table -->
+            <div class="space-y-3 pt-2">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        Architectural Comparison: Persistent Cluster vs Serverless FaaS
+                    </h3>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                            <tr>
+                                <th class="px-4 py-2.5">Dimension</th>
+                                <th class="px-4 py-2.5 text-cyan-400">Persistent Multi-Worker Pool</th>
+                                <th class="px-4 py-2.5 text-purple-400">Serverless FaaS Runtime</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60 bg-slate-900/60 font-mono text-[11px]">
+                            <tr>
+                                <td class="px-4 py-2.5 font-sans font-medium text-slate-200">Startup Latency</td>
+                                <td class="px-4 py-2.5 text-emerald-400">Zero startup delay (~0.5ms inference)</td>
+                                <td class="px-4 py-2.5 text-rose-300">Cold start penalty (~220ms init), warm reuse (~0.5ms)</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-2.5 font-sans font-medium text-slate-200">Resource Provisioning</td>
+                                <td class="px-4 py-2.5">Static pre-warmed dedicated worker pool</td>
+                                <td class="px-4 py-2.5">On-demand ephemeral container; teardown on idle timeout</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-2.5 font-sans font-medium text-slate-200">Memory & Idle Cost</td>
+                                <td class="px-4 py-2.5">Continuous memory allocation even when idle</td>
+                                <td class="px-4 py-2.5 text-purple-300">Zero cost and zero active memory when idle</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-2.5 font-sans font-medium text-slate-200">Scaling Model</td>
+                                <td class="px-4 py-2.5">Fixed capacity; queue/failover across provisioned nodes</td>
+                                <td class="px-4 py-2.5">Elastic horizontal auto-scaling per request invocation</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-2.5 font-sans font-medium text-slate-200">Ideal Workload</td>
+                                <td class="px-4 py-2.5">Steady, high-throughput, latency-critical inference pipelines</td>
+                                <td class="px-4 py-2.5">Burst-heavy, sporadic, or cost-sensitive intermittent calls</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
